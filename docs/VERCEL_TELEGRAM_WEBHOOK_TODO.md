@@ -34,17 +34,12 @@ Configurar na Vercel:
 BOT_TOKEN=token_do_bot_telegram
 HRBETTING_SECRET=segredo_igual_ao_configurado_na_app
 TELEGRAM_WEBHOOK_SECRET=segredo_usado_no_setWebhook
-BLOB_PUBLIC_BASE_URL=https://xxxxx.public.blob.vercel-storage.com
+BLOB_READ_WRITE_TOKEN=token_do_blob_store
 ```
 
-Nota: `BLOB_PUBLIC_BASE_URL` vem do Vercel Blob. Depois do primeiro upload, usar a base do `blob.url`.
+Nota: `BLOB_READ_WRITE_TOKEN` é gerado automaticamente pela Vercel quando crias um Blob Store (Storage → Create Database → Blob) e o ligas ao projeto. Copia o valor do separador `.env.local` do Blob Store.
 
-Exemplo:
-
-```text
-blob.url = https://abc123.public.blob.vercel-storage.com/signals/17-07-2026.json
-BLOB_PUBLIC_BASE_URL = https://abc123.public.blob.vercel-storage.com
-```
+O Blob Store criado por omissão é **privado**, por isso os endpoints usam as funções `put`/`get` da SDK com `access: "private"` e o `token`, em vez de um URL público (`BLOB_PUBLIC_BASE_URL` deixou de ser necessário).
 
 ## Dependência Necessária
 
@@ -94,9 +89,10 @@ export async function POST(req: NextRequest) {
   const filename = `signals/${body.day}.json`;
 
   const blob = await put(filename, JSON.stringify(body.intervals, null, 2), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
-    allowOverwrite: true
+    allowOverwrite: true,
+    token: process.env.BLOB_READ_WRITE_TOKEN
   });
 
   return NextResponse.json({
@@ -119,6 +115,7 @@ app/api/telegram/route.ts
 Código:
 
 ```ts
+import { get } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 
 async function telegram(method: string, payload: unknown) {
@@ -156,17 +153,18 @@ async function answerCallback(callbackQueryId: string) {
 }
 
 async function loadSignalsJson(day: string): Promise<Record<string, string> | null> {
-  const url = `${process.env.BLOB_PUBLIC_BASE_URL}/signals/${day}.json`;
-
-  const response = await fetch(url, {
-    cache: "no-store"
+  const result = await get(`signals/${day}.json`, {
+    access: "private",
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+    useCache: false
   });
 
-  if (!response.ok) {
+  if (!result) {
     return null;
   }
 
-  return response.json();
+  const text = await new Response(result.stream).text();
+  return JSON.parse(text);
 }
 
 export async function POST(req: NextRequest) {
