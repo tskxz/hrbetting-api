@@ -42,7 +42,7 @@ async function telegram(method: string, payload: unknown) {
 }
 
 function intervalSummaryText(interval: string) {
-  return `Jogos das ${interval}`;
+  return `\u{1F3AF} Mercados em foco\n\n${interval} \u00B7 Odds e picks filtradas`;
 }
 
 function intervalButton(day: string, interval: string): ReplyMarkup {
@@ -50,7 +50,7 @@ function intervalButton(day: string, interval: string): ReplyMarkup {
     inline_keyboard: [
       [
         {
-          text: "Ver jogos",
+          text: "Ver picks do bloco",
           callback_data: `interval|${day}|${interval}`,
         },
       ],
@@ -63,7 +63,7 @@ function closeButton(day: string, interval: string): ReplyMarkup {
     inline_keyboard: [
       [
         {
-          text: "Fechar",
+          text: "Fechar bloco",
           callback_data: `close|${day}|${interval}`,
         },
       ],
@@ -79,7 +79,6 @@ function fitTelegramText(text: string) {
   const suffix = "\n\nMensagem cortada pelo limite do Telegram.";
   return text.slice(0, TELEGRAM_TEXT_LIMIT - suffix.length).trimEnd() + suffix;
 }
-
 
 async function editMessageText(
   chatId: number | string,
