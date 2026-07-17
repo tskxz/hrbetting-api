@@ -80,6 +80,8 @@ function fitTelegramText(text: string) {
   return text.slice(0, TELEGRAM_TEXT_LIMIT - suffix.length).trimEnd() + suffix;
 }
 
+
+
 async function editMessageText(
   chatId: number | string,
   messageId: number,
