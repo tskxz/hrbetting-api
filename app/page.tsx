@@ -1,34 +1,38 @@
 import Image from "next/image";
-
-const markets = [
-  { code: "1", description: "Vitória da equipa da casa" },
-  { code: "2", description: "Vitória da equipa de fora" },
-  { code: "1X", description: "Dupla hipótese casa ou empate" },
-  { code: "X2", description: "Dupla hipótese fora ou empate" },
-  { code: "Over 0.5 HT", description: "Mais de 0.5 golos na 1ª parte" },
-  { code: "Over 1.5 FT", description: "Mais de 1.5 golos no jogo" },
-  { code: "Over 2.5 FT", description: "Mais de 2.5 golos no jogo" },
-  { code: "BTTS (Y)", description: "Ambas as equipas marcam" },
-];
+import { MarketsExplorer } from "./markets-explorer";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-zinc-50 px-4 py-12 text-zinc-900 sm:px-6 lg:px-8">
-      <main className="mx-auto flex max-w-3xl flex-col gap-10">
+    <div className="relative min-h-screen overflow-hidden px-4 py-16 sm:px-6 lg:px-8">
+      {/* Subtle accent glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-[radial-gradient(60%_100%_at_50%_0%,rgba(34,197,94,0.14),transparent)]"
+      />
+
+      <main className="mx-auto flex max-w-3xl flex-col gap-14">
         {/* Header */}
-        <header className="flex flex-col items-center gap-5 text-center">
-          <Image
-            src="/Logo_HR_Betting.png"
-            alt="Logo HR Betting"
-            width={200}
-            height={110}
-            priority
-          />
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl text-balance">
+        <header className="animate-fade-up flex flex-col items-center gap-6 text-center">
+          <div className="rounded-2xl border border-border bg-card/60 p-4 shadow-lg shadow-black/20 backdrop-blur">
+            <Image
+              src="/Logo_HR_Betting.png"
+              alt="Logo HR Betting"
+              width={180}
+              height={100}
+              priority
+            />
+          </div>
+
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+            <span className="size-1.5 rounded-full bg-accent" />
+            API + Desktop C# / WPF
+          </span>
+
+          <div className="space-y-3">
+            <h1 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               HR Betting API
             </h1>
-            <p className="mx-auto max-w-xl leading-relaxed text-zinc-600 text-pretty">
+            <p className="mx-auto max-w-xl text-pretty leading-relaxed text-muted-foreground">
               API para análise de jogos de futebol e cálculo de probabilidades,
               utilizada por uma aplicação desktop em C# (.NET / WPF).
             </p>
@@ -36,38 +40,11 @@ export default function Home() {
         </header>
 
         {/* Mercados suportados */}
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-          <h2 className="text-xl font-semibold text-zinc-900">
-            Mercados suportados
-          </h2>
-          <div className="mt-6 overflow-hidden rounded-xl border border-zinc-200">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50 text-zinc-500">
-                  <th className="px-4 py-3 font-medium">Mercado</th>
-                  <th className="px-4 py-3 font-medium">Descrição</th>
-                </tr>
-              </thead>
-              <tbody>
-                {markets.map((market) => (
-                  <tr
-                    key={market.code}
-                    className="border-b border-zinc-100 last:border-0"
-                  >
-                    <td className="px-4 py-3 align-middle">
-                      <code className="rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs text-zinc-700">
-                        {market.code}
-                      </code>
-                    </td>
-                    <td className="px-4 py-3 align-middle text-zinc-600">
-                      {market.description}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <MarketsExplorer />
+
+        <footer className="text-center text-xs text-muted-foreground">
+          Toque num mercado para copiar o respetivo código.
+        </footer>
       </main>
     </div>
   );
