@@ -1,3 +1,4 @@
+import { get } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 
 async function telegram(method: string, payload: unknown) {
@@ -37,17 +38,18 @@ async function answerCallback(callbackQueryId: string) {
 async function loadSignalsJson(
   day: string
 ): Promise<Record<string, string> | null> {
-  const url = `${process.env.BLOB_PUBLIC_BASE_URL}/signals/${day}.json`;
-
-  const response = await fetch(url, {
-    cache: "no-store",
+  const result = await get(`signals/${day}.json`, {
+    access: "private",
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+    useCache: false,
   });
 
-  if (!response.ok) {
+  if (!result) {
     return null;
   }
 
-  return response.json();
+  const text = await new Response(result.stream).text();
+  return JSON.parse(text);
 }
 
 export async function POST(req: NextRequest) {

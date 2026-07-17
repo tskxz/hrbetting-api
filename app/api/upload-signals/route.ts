@@ -27,9 +27,10 @@ export async function POST(req: NextRequest) {
   const filename = `signals/${body.day}.json`;
 
   const blob = await put(filename, JSON.stringify(body.intervals, null, 2), {
-    access: "public",
+    access: "private",
     contentType: "application/json",
     allowOverwrite: true,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
   });
 
   return NextResponse.json({
