@@ -63,7 +63,6 @@ Webhook do bot de Telegram. Valida o cabeçalho `x-telegram-bot-api-secret-token
 
 Em produção e preview na Vercel, a autenticação no Blob Store pode ser feita automaticamente via OIDC, desde que o Blob Store esteja ligado ao projeto. Em desenvolvimento local é necessário definir `BLOB_READ_WRITE_TOKEN` num ficheiro `.env`.
 
-Consultar [docs/VERCEL_TELEGRAM_WEBHOOK_TODO.md](docs/VERCEL_TELEGRAM_WEBHOOK_TODO.md) para o detalhe completo do fluxo de configuração do Telegram.
 
 ## Desenvolvimento local
 
@@ -98,5 +97,3 @@ O projeto está ligado à Vercel. O deploy é feito automaticamente a partir do 
 ```bash
 npx vercel deploy --prod
 ```
-
-Depois de cada deploy que altere o webhook do Telegram, é necessário reconfigurar o webhook com `setWebhook` apontando para o domínio de produção, conforme descrito em [docs/VERCEL_TELEGRAM_WEBHOOK_TODO.md](docs/VERCEL_TELEGRAM_WEBHOOK_TODO.md).
