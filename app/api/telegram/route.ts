@@ -11,6 +11,8 @@ type TelegramUpdate = {
 };
 
 const TELEGRAM_TEXT_LIMIT = 4096;
+const WATERMARK = "*HRBETTING*";
+const WATERMARK_HEADER = `${WATERMARK}\n\n`;
 
 async function telegram(method: string, payload: unknown) {
   const response = await fetch(
@@ -33,13 +35,15 @@ async function telegram(method: string, payload: unknown) {
 
 // Mesmo algoritmo do DividirEmPartes em TelegramService.cs (repositorio HRBETTING),
 // para que mensagens longas fiquem divididas da mesma forma nos dois sitios.
+// O limite reserva espaco para a marca de agua, que e adicionada a cada parte.
 function splitTelegramText(text: string): string[] {
+  const limit = TELEGRAM_TEXT_LIMIT - WATERMARK_HEADER.length;
   const lines = text.split("\n");
   const parts: string[] = [];
   let current = "";
 
   for (const line of lines) {
-    if (current.length > 0 && current.length + line.length + 1 > TELEGRAM_TEXT_LIMIT) {
+    if (current.length > 0 && current.length + line.length + 1 > limit) {
       parts.push(current.trimEnd());
       current = "";
     }
@@ -64,7 +68,7 @@ async function sendPrivateMessage(chatId: number, text: string) {
   for (let i = 0; i < parts.length; i++) {
     response = await telegram("sendMessage", {
       chat_id: chatId,
-      text: parts[i],
+      text: WATERMARK_HEADER + parts[i],
       parse_mode: "Markdown",
       disable_web_page_preview: true,
       // Impede reencaminhar/guardar, tal como as mensagens do canal na app HRBETTING.
