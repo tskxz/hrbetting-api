@@ -31,24 +31,56 @@ async function telegram(method: string, payload: unknown) {
   return response;
 }
 
-function fitTelegramText(text: string) {
-  if (text.length <= TELEGRAM_TEXT_LIMIT) {
-    return text;
+// Mesmo algoritmo do DividirEmPartes em TelegramService.cs (repositorio HRBETTING),
+// para que mensagens longas fiquem divididas da mesma forma nos dois sitios.
+function splitTelegramText(text: string): string[] {
+  const lines = text.split("\n");
+  const parts: string[] = [];
+  let current = "";
+
+  for (const line of lines) {
+    if (current.length > 0 && current.length + line.length + 1 > TELEGRAM_TEXT_LIMIT) {
+      parts.push(current.trimEnd());
+      current = "";
+    }
+    current += line + "\n";
   }
 
-  const suffix = "\n\nMensagem cortada pelo limite do Telegram.";
-  return text.slice(0, TELEGRAM_TEXT_LIMIT - suffix.length).trimEnd() + suffix;
+  if (current.length > 0) {
+    parts.push(current.trimEnd());
+  }
+
+  return parts.length > 0 ? parts : [text];
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function sendPrivateMessage(chatId: number, text: string) {
-  return telegram("sendMessage", {
-    chat_id: chatId,
-    text: fitTelegramText(text),
-    parse_mode: "Markdown",
-    disable_web_page_preview: true,
-    // Impede reencaminhar/guardar, tal como as mensagens do canal na app HRBETTING.
-    protect_content: true,
-  });
+  const parts = splitTelegramText(text);
+  let response: Response | undefined;
+
+  for (let i = 0; i < parts.length; i++) {
+    response = await telegram("sendMessage", {
+      chat_id: chatId,
+      text: parts[i],
+      parse_mode: "Markdown",
+      disable_web_page_preview: true,
+      // Impede reencaminhar/guardar, tal como as mensagens do canal na app HRBETTING.
+      protect_content: true,
+    });
+
+    if (!response.ok) {
+      return response;
+    }
+
+    if (i < parts.length - 1) {
+      await delay(400);
+    }
+  }
+
+  return response!;
 }
 
 async function loadSignalsJson(
