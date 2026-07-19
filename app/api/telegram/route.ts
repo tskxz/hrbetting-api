@@ -33,6 +33,26 @@ async function telegram(method: string, payload: unknown) {
   return response;
 }
 
+// Linha separadora entre jogos, construida em MensagensExporter.cs (repositorio
+// HRBETTING) como `{Indent}{Separador}` — ex: "    ────────────".
+const SEPARATOR_LINE = /^─+$/;
+
+// Repete a marca de agua a seguir a cada jogo, para alem do topo de cada mensagem,
+// para que um print de qualquer zona do texto mostre sempre "HRBETTING" por perto.
+function interspersWatermark(text: string): string {
+  const lines = text.split("\n");
+  const result: string[] = [];
+
+  for (const line of lines) {
+    result.push(line);
+    if (SEPARATOR_LINE.test(line.trim())) {
+      result.push(WATERMARK);
+    }
+  }
+
+  return result.join("\n");
+}
+
 // Mesmo algoritmo do DividirEmPartes em TelegramService.cs (repositorio HRBETTING),
 // para que mensagens longas fiquem divididas da mesma forma nos dois sitios.
 // O limite reserva espaco para a marca de agua, que e adicionada a cada parte.
@@ -62,7 +82,7 @@ function delay(ms: number) {
 }
 
 async function sendPrivateMessage(chatId: number, text: string) {
-  const parts = splitTelegramText(text);
+  const parts = splitTelegramText(interspersWatermark(text));
   let response: Response | undefined;
 
   for (let i = 0; i < parts.length; i++) {
