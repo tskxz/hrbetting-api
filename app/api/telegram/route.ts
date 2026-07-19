@@ -1,21 +1,16 @@
 import { get } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
 
-type TelegramCallbackQuery = {
-  id: string;
-  data?: string;
-  from: { id: number };
+type TelegramMessage = {
+  chat: { id: number };
+  text?: string;
 };
 
 type TelegramUpdate = {
-  callback_query?: TelegramCallbackQuery;
+  message?: TelegramMessage;
 };
 
 const TELEGRAM_TEXT_LIMIT = 4096;
-const TELEGRAM_ALERT_TEXT_LIMIT = 200;
-
-const PRIVATE_CHAT_HINT =
-  "Abre uma conversa privada com o bot (procura o nome do bot e clica em Start) e volta a clicar no botao.";
 
 async function telegram(method: string, payload: unknown) {
   const response = await fetch(
@@ -45,34 +40,14 @@ function fitTelegramText(text: string) {
   return text.slice(0, TELEGRAM_TEXT_LIMIT - suffix.length).trimEnd() + suffix;
 }
 
-function fitAlertText(text: string) {
-  if (text.length <= TELEGRAM_ALERT_TEXT_LIMIT) {
-    return text;
-  }
-
-  return text.slice(0, TELEGRAM_ALERT_TEXT_LIMIT - 1).trimEnd() + "\u2026";
-}
-
-async function sendPrivateMessage(userId: number, text: string) {
+async function sendPrivateMessage(chatId: number, text: string) {
   return telegram("sendMessage", {
-    chat_id: userId,
+    chat_id: chatId,
     text: fitTelegramText(text),
     parse_mode: "Markdown",
     disable_web_page_preview: true,
     // Impede reencaminhar/guardar, tal como as mensagens do canal na app HRBETTING.
     protect_content: true,
-  });
-}
-
-async function answerCallback(
-  callbackQueryId: string,
-  text?: string,
-  showAlert = false
-) {
-  return telegram("answerCallbackQuery", {
-    callback_query_id: callbackQueryId,
-    text: text ? fitAlertText(text) : undefined,
-    show_alert: showAlert,
   });
 }
 
@@ -93,6 +68,28 @@ async function loadSignalsJson(
   return JSON.parse(text);
 }
 
+// Payload construido pela app HRBETTING (TelegramService.cs) no formato
+// "<dia>_<intervalo sem dois pontos>", ex: "17-07-2026_1700-1800".
+function decodeStartPayload(
+  payload: string
+): { day: string; interval: string } | null {
+  const separatorIndex = payload.indexOf("_");
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  const day = payload.slice(0, separatorIndex);
+  const intervalRaw = payload.slice(separatorIndex + 1);
+  const match = intervalRaw.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+
+  if (!day || !match) {
+    return null;
+  }
+
+  const [, h1, m1, h2, m2] = match;
+  return { day, interval: `${h1}:${m1}-${h2}:${m2}` };
+}
+
 export async function POST(req: NextRequest) {
   const telegramSecret = req.headers.get("x-telegram-bot-api-secret-token");
 
@@ -106,35 +103,31 @@ export async function POST(req: NextRequest) {
   const update = (await req.json()) as TelegramUpdate;
 
   try {
-    const callback = update.callback_query;
-    if (!callback) {
+    const message = update.message;
+    const text = message?.text?.trim() ?? "";
+
+    if (!message || !text.startsWith("/start")) {
       return NextResponse.json({ ok: true });
     }
 
-    const userId = callback.from.id;
-    const data = String(callback.data || "");
-    const [action, day, interval] = data.split("|");
+    const [, payload] = text.split(/\s+/, 2);
+    const decoded = payload ? decodeStartPayload(payload) : null;
 
-    if (action !== "interval" || !day || !interval) {
-      await answerCallback(callback.id);
+    if (!decoded) {
+      await sendPrivateMessage(
+        message.chat.id,
+        'Usa o botao "Ver picks do bloco" no canal para receberes os sinais aqui.'
+      );
       return NextResponse.json({ ok: true });
     }
 
-    const intervals = await loadSignalsJson(day);
-    const details = intervals?.[interval];
+    const intervals = await loadSignalsJson(decoded.day);
+    const details = intervals?.[decoded.interval];
 
-    if (!details) {
-      await answerCallback(callback.id, `Sem dados para ${interval}.`, true);
-      return NextResponse.json({ ok: true });
-    }
-
-    const sent = await sendPrivateMessage(userId, details);
-
-    if (sent.ok) {
-      await answerCallback(callback.id, "Picks enviados na tua conversa privada com o bot.");
-    } else {
-      await answerCallback(callback.id, PRIVATE_CHAT_HINT, true);
-    }
+    await sendPrivateMessage(
+      message.chat.id,
+      details ?? `Sem dados para ${decoded.interval}.`
+    );
 
     return NextResponse.json({ ok: true });
   } catch (error) {
