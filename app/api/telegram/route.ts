@@ -14,6 +14,19 @@ const TELEGRAM_TEXT_LIMIT = 4096;
 const WATERMARK = "*HRBETTING*";
 const WATERMARK_HEADER = `${WATERMARK}\n\n`;
 
+// Mensagem enviada quando alguem inicia conversa com o bot sem vir de um link
+// de intervalo especifico (ex: link generico partilhado no site/bio/canal).
+const WELCOME_MESSAGE = `Bem-vindo a comunidade.
+
+A maioria dos apostadores segue o instinto e o resultado do ultimo jogo. Aqui seguimos o motor de calculo: probabilidades, xGoals e xCorners recalculados todos os dias, jogo a jogo.
+
+📊 Motor de calculo proprio — nao e opiniao, e modelo
+🎯 Picks filtrados por mercado (1, X2, Over, BTTS...)
+📈 Taxa de acerto publicada, sem esconder o que corre mal
+🔒 Conteudo exclusivo, protegido e para uso pessoal
+
+Os sinais chegam aqui, em privado, assim que ficam disponiveis.`;
+
 async function telegram(method: string, payload: unknown) {
   const response = await fetch(
     `https://api.telegram.org/bot${process.env.BOT_TOKEN}/${method}`,
@@ -170,10 +183,7 @@ export async function POST(req: NextRequest) {
     const decoded = payload ? decodeStartPayload(payload) : null;
 
     if (!decoded) {
-      await sendPrivateMessage(
-        message.chat.id,
-        'Usa o botao "Ver picks do bloco" no canal para receberes os sinais aqui.'
-      );
+      await sendPrivateMessage(message.chat.id, WELCOME_MESSAGE);
       return NextResponse.json({ ok: true });
     }
 
