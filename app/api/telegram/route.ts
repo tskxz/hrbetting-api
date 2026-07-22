@@ -30,8 +30,15 @@ const WATERMARK_HEADER = `${WATERMARK}\n\n`;
 // na mensagem de prova, ja que nao existe uma mencao real @hrbetting.
 const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TELEGRAM_CHANNEL_URL";
 
+// TODO: definir AFFILIATE_SIGNUP_URL nas env vars quando a parceria/afiliacao
+// de apostas estiver fechada — por agora e so um placeholder.
+const AFFILIATE_SIGNUP_URL =
+  process.env.AFFILIATE_SIGNUP_URL ?? "https://DEFINIR_AFFILIATE_SIGNUP_URL";
+
 const PROOF_BUTTON_DATA = "start|prova";
 const COMECAR_BUTTON_DATA = "start|comecar";
+const PASSO1_BUTTON_DATA = "start|passo1";
+const POSTOS_BUTTON_DATA = "start|postos";
 
 const PROOF_BUTTON: InlineKeyboard = {
   inline_keyboard: [[{ text: "Mostra-me a prova", callback_data: PROOF_BUTTON_DATA }]],
@@ -39,6 +46,21 @@ const PROOF_BUTTON: InlineKeyboard = {
 
 const COMECAR_BUTTON: InlineKeyboard = {
   inline_keyboard: [[{ text: "Quero começar →", callback_data: COMECAR_BUTTON_DATA }]],
+};
+
+const PASSO1_TRIGGER_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Criar conta →", callback_data: PASSO1_BUTTON_DATA }]],
+};
+
+const PASSO1_BUTTONS: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "Criar conta", url: AFFILIATE_SIGNUP_URL }],
+    [{ text: "Já tenho conta", callback_data: POSTOS_BUTTON_DATA }],
+  ],
+};
+
+const SUBSCREVER_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Subscrever Canal", url: CHANNEL_URL }]],
 };
 
 // Mensagem enviada quando alguem inicia conversa com o bot sem vir de um link
@@ -69,6 +91,21 @@ const COMECAR_MESSAGE = `Como funciona
 Staking fixo, sem emocao: 1 unidade por pick. Jogamos para consistencia, o provavel acima do espetacular.
 
 Duvidas? Fala aqui que respondo assim que puder.`;
+
+const PASSO1_MESSAGE = `Passo 1 — Criar a conta
+
+Para acompanhares as picks com odds reais precisas de uma conta na casa de apostas parceira.
+
+Ainda nao tens conta? Cria a partir do botao abaixo.
+Ja tens conta? Confirma no botao "Ja tenho conta" para avancares.
+
++18 · Joga com responsabilidade`;
+
+const POSTOS_MESSAGE = `Estas a postos! ✅
+
+Agora e seguir o jogo — as picks, as noticias e os resultados ficam aqui e no canal.
+
+Subscreve o canal e nao percas a proxima pick.`;
 
 async function telegram(method: string, payload: unknown) {
   const response = await fetch(
@@ -236,7 +273,15 @@ export async function POST(req: NextRequest) {
       }
 
       if (callback.data === COMECAR_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, COMECAR_MESSAGE);
+        await sendPrivateMessage(callback.from.id, COMECAR_MESSAGE, PASSO1_TRIGGER_BUTTON);
+      }
+
+      if (callback.data === PASSO1_BUTTON_DATA) {
+        await sendPrivateMessage(callback.from.id, PASSO1_MESSAGE, PASSO1_BUTTONS);
+      }
+
+      if (callback.data === POSTOS_BUTTON_DATA) {
+        await sendPrivateMessage(callback.from.id, POSTOS_MESSAGE, SUBSCREVER_BUTTON);
       }
 
       return NextResponse.json({ ok: true });
