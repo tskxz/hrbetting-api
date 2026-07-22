@@ -66,8 +66,8 @@ const PASSO1_TRIGGER_BUTTON: InlineKeyboard = {
 
 const PASSO1_BUTTONS: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "Criar conta", url: SIGNUP_URL }],
-    [{ text: "Já tenho conta", callback_data: POSTOS_BUTTON_DATA }],
+    [{ text: "Pagar agora", callback_data: ASSINAR_BUTTON_DATA }],
+    [{ text: "Já paguei", callback_data: POSTOS_BUTTON_DATA }],
   ],
 };
 
@@ -111,14 +111,12 @@ Staking fixo, sem emocao: 1 unidade por pick. Jogamos para consistencia, o prova
 
 Duvidas? Fala aqui que respondo assim que puder.`;
 
-const PASSO1_MESSAGE = `Passo 1 — Criar a conta
+const PASSO1_MESSAGE = `Passo 1 — Assinar
 
-Para acompanhares as picks com odds reais precisas de uma conta na casa de apostas parceira.
+Para teres acesso as picks completas e ao canal precisas de uma subscricao Premium ativa.
 
-Ainda nao tens conta? Cria a partir do botao abaixo.
-Ja tens conta? Confirma no botao "Ja tenho conta" para avancares.
-
-+18 · Joga com responsabilidade`;
+Ainda nao pagaste? Paga a partir do botao abaixo.
+Ja pagaste? Confirma no botao "Ja paguei" para avancares.`;
 
 const POSTOS_MESSAGE = `Estas a postos! ✅
 
