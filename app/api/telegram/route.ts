@@ -25,19 +25,20 @@ const TELEGRAM_TEXT_LIMIT = 4096;
 const WATERMARK = "*HRBETTING*";
 const WATERMARK_HEADER = `${WATERMARK}\n\n`;
 
-// Link do canal principal, mostrado no passo "prova" do onboarding do bot.
-// TODO: definir TELEGRAM_CHANNEL_URL nas env vars com o link/convite real do canal
-// (o ChatId guardado na app HRBETTING e um ID numerico privado, sem link publico).
+// Link de convite do canal principal (privado, sem @username publico —
+// confirmado via getChat). Usado como link por baixo do texto "@hrbetting"
+// na mensagem de prova, ja que nao existe uma mencao real @hrbetting.
 const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TELEGRAM_CHANNEL_URL";
 
 const PROOF_BUTTON_DATA = "start|prova";
+const COMECAR_BUTTON_DATA = "start|comecar";
 
 const PROOF_BUTTON: InlineKeyboard = {
   inline_keyboard: [[{ text: "Mostra-me a prova", callback_data: PROOF_BUTTON_DATA }]],
 };
 
-const CHANNEL_BUTTON: InlineKeyboard = {
-  inline_keyboard: [[{ text: "Abrir canal HRBETTING", url: CHANNEL_URL }]],
+const COMECAR_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Quero começar →", callback_data: COMECAR_BUTTON_DATA }]],
 };
 
 // Mensagem enviada quando alguem inicia conversa com o bot sem vir de um link
@@ -57,7 +58,17 @@ const PROOF_MESSAGE = `A prova — e podes confirma-la tu mesmo.
 
 Cada pick fica registada no canal com tudo a mostra: jogo, mercado, odd e a leitura por tras. No fim, o resultado fica sempre visivel — acertos e erros, nada escondido.
 
-Nao acreditas? Nao precisas. Abre o canal e confirma com os teus proprios olhos.`;
+Nao acreditas? Nao precisas. Abre o [@hrbetting](${CHANNEL_URL}), percorre os ultimos dias e confirma com os teus proprios olhos.`;
+
+const COMECAR_MESSAGE = `Como funciona
+
+⚽ O motor de calculo corre os jogos do dia, mercado a mercado
+🕐 As picks ficam disponiveis por intervalo, a tempo de entrares
+📊 Cada pick traz o jogo, o mercado + odd, e a leitura — o porque, nao so o palpite
+
+Staking fixo, sem emocao: 1 unidade por pick. Jogamos para consistencia, o provavel acima do espetacular.
+
+Duvidas? Fala aqui que respondo assim que puder.`;
 
 async function telegram(method: string, payload: unknown) {
   const response = await fetch(
@@ -221,7 +232,11 @@ export async function POST(req: NextRequest) {
       await answerCallback(callback.id);
 
       if (callback.data === PROOF_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, PROOF_MESSAGE, CHANNEL_BUTTON);
+        await sendPrivateMessage(callback.from.id, PROOF_MESSAGE, COMECAR_BUTTON);
+      }
+
+      if (callback.data === COMECAR_BUTTON_DATA) {
+        await sendPrivateMessage(callback.from.id, COMECAR_MESSAGE);
       }
 
       return NextResponse.json({ ok: true });
