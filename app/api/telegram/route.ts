@@ -56,8 +56,15 @@ const PROOF_BUTTON: InlineKeyboard = {
   inline_keyboard: [[{ text: "Mostra-me a prova", callback_data: PROOF_BUTTON_DATA }]],
 };
 
-const COMECAR_BUTTON: InlineKeyboard = {
-  inline_keyboard: [[{ text: "Quero começar →", callback_data: COMECAR_BUTTON_DATA }]],
+// Depois da prova, o utilizador escolhe entre continuar para o pagamento
+// (Premium) ou só ver o canal (Free) — o canal e o mesmo nos dois casos,
+// atualmente gerido como premium: pedir entrada sem subscrição ativa
+// continua a ser recusado por chat_join_request, o Free só mostra o link.
+const PROOF_BUTTONS: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "Premium", callback_data: COMECAR_BUTTON_DATA }],
+    [{ text: "Free", url: CHANNEL_URL }],
+  ],
 };
 
 const PASSO1_TRIGGER_BUTTON: InlineKeyboard = {
@@ -281,7 +288,7 @@ export async function POST(req: NextRequest) {
       await answerCallback(callback.id);
 
       if (callback.data === PROOF_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, PROOF_MESSAGE, COMECAR_BUTTON);
+        await sendPrivateMessage(callback.from.id, PROOF_MESSAGE, PROOF_BUTTONS);
       }
 
       if (callback.data === COMECAR_BUTTON_DATA) {
