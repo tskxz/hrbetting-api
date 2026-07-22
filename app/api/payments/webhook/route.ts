@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
           await sendTelegramMessage(
             telegramUserId,
-            "Pagamento confirmado! A tua subscricao Premium esta ativa.\n\nPede para entrar no canal — a aprovacao e automatica.",
+            "Estas a postos! ✅\n\nPagamento confirmado — a tua subscricao Premium esta ativa.\n\nAgora e seguir o jogo — as picks, as noticias e os resultados ficam aqui e no canal. Pede para entrar que a aprovacao e automatica.",
             { inline_keyboard: [[{ text: "Subscrever Canal", url: CHANNEL_URL }]] }
           );
         }

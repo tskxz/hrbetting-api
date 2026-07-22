@@ -46,7 +46,6 @@ const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TE
 const SIGNUP_URL = process.env.SIGNUP_URL ?? "https://hrbetting-api.vercel.app/";
 
 const PASSO1_BUTTON_DATA = "start|passo1";
-const POSTOS_BUTTON_DATA = "start|postos";
 
 // Logo nas boas-vindas, o utilizador escolhe entre continuar para o pagamento
 // (Premium) ou só ver o canal (Free) — o canal e o mesmo nos dois casos,
@@ -63,13 +62,6 @@ const WELCOME_BUTTONS: InlineKeyboard = {
 // cria a sessao de Checkout na hora e mostra "Pagar agora" ja como link real).
 const PASSO1_LINK_BUTTON: InlineKeyboard = {
   inline_keyboard: [[{ text: "Assinar", callback_data: PASSO1_BUTTON_DATA }]],
-};
-
-const POSTOS_BUTTONS: InlineKeyboard = {
-  inline_keyboard: [
-    [{ text: "Assinar", callback_data: PASSO1_BUTTON_DATA }],
-    [{ text: "Subscrever Canal", url: CHANNEL_URL }],
-  ],
 };
 
 // Mensagem enviada quando alguem inicia conversa com o bot sem vir de um link
@@ -89,17 +81,9 @@ const PASSO1_MESSAGE = `Passo 1 — Assinar
 
 Acesso completo ao canal HRBETTING: picks diarias, motor de calculo, taxa de acerto sempre visivel.
 
-Pagamento seguro via Stripe. A subscricao fica ativa assim que o pagamento for confirmado, e a entrada no canal e aprovada automaticamente.
-
-Ja pagaste? Confirma no botao "Ja paguei" para avancares.`;
+Pagamento seguro via Stripe. Assim que o pagamento for confirmado, avisamos aqui e a entrada no canal fica aprovada automaticamente.`;
 
 const PASSO1_ERRO_MESSAGE = "Nao foi possivel criar o pagamento agora. Tenta novamente daqui a pouco.";
-
-const POSTOS_MESSAGE = `Estas a postos! ✅
-
-Agora e seguir o jogo — as picks, as noticias e os resultados ficam aqui e no canal.
-
-O canal e reservado a subscritores. Assina e depois pede para entrar — a aprovacao e automatica assim que o pagamento for confirmado.`;
 
 const PEDIDO_RECUSADO_MESSAGE = `O teu pedido para entrar no canal HRBETTING nao foi aprovado — nao ha nenhuma subscricao ativa associada a esta conta.
 
@@ -262,28 +246,21 @@ export async function POST(req: NextRequest) {
           `${SIGNUP_URL}?checkout=cancel`
         );
 
-        const buttons: InlineKeyboard = session.url
-          ? {
-              inline_keyboard: [
-                [{ text: "Pagar agora", url: session.url }],
-                [{ text: "Já paguei", callback_data: POSTOS_BUTTON_DATA }],
-              ],
-            }
-          : {
-              inline_keyboard: [
-                [{ text: "Tentar novamente", callback_data: PASSO1_BUTTON_DATA }],
-              ],
-            };
+        const buttons: InlineKeyboard = {
+          inline_keyboard: [
+            [
+              session.url
+                ? { text: "Pagar agora", url: session.url }
+                : { text: "Tentar novamente", callback_data: PASSO1_BUTTON_DATA },
+            ],
+          ],
+        };
 
         await sendPrivateMessage(
           callback.from.id,
           session.url ? PASSO1_MESSAGE : PASSO1_ERRO_MESSAGE,
           buttons
         );
-      }
-
-      if (callback.data === POSTOS_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, POSTOS_MESSAGE, POSTOS_BUTTONS);
       }
 
       return NextResponse.json({ ok: true });
