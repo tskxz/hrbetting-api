@@ -45,7 +45,6 @@ const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TE
 
 const SIGNUP_URL = process.env.SIGNUP_URL ?? "https://hrbetting-api.vercel.app/";
 
-const COMECAR_BUTTON_DATA = "start|comecar";
 const PASSO1_BUTTON_DATA = "start|passo1";
 const POSTOS_BUTTON_DATA = "start|postos";
 const ASSINAR_BUTTON_DATA = "start|assinar";
@@ -56,13 +55,9 @@ const ASSINAR_BUTTON_DATA = "start|assinar";
 // continua a ser recusado por chat_join_request, o Free só mostra o link.
 const WELCOME_BUTTONS: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "Premium", callback_data: COMECAR_BUTTON_DATA }],
+    [{ text: "Premium", callback_data: PASSO1_BUTTON_DATA }],
     [{ text: "Free", url: CHANNEL_URL }],
   ],
-};
-
-const PASSO1_TRIGGER_BUTTON: InlineKeyboard = {
-  inline_keyboard: [[{ text: "Criar conta →", callback_data: PASSO1_BUTTON_DATA }]],
 };
 
 const PASSO1_BUTTONS: InlineKeyboard = {
@@ -95,16 +90,6 @@ A maioria dos apostadores segue o instinto e o resultado do ultimo jogo. Aqui se
 🔒 Conteudo exclusivo, protegido e para uso pessoal
 
 Os sinais chegam aqui, em privado, assim que ficam disponiveis.`;
-
-const COMECAR_MESSAGE = `Como funciona
-
-⚽ O motor de calculo corre os jogos do dia, mercado a mercado
-🕐 As picks ficam disponiveis por intervalo, a tempo de entrares
-📊 Cada pick traz o jogo, o mercado + odd, e a leitura — o porque, nao so o palpite
-
-Staking fixo, sem emocao: 1 unidade por pick. Jogamos para consistencia, o provavel acima do espetacular.
-
-Duvidas? Fala aqui que respondo assim que puder.`;
 
 const PASSO1_MESSAGE = `Passo 1 — Assinar
 
@@ -274,10 +259,6 @@ export async function POST(req: NextRequest) {
     const callback = update.callback_query;
     if (callback) {
       await answerCallback(callback.id);
-
-      if (callback.data === COMECAR_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, COMECAR_MESSAGE, PASSO1_TRIGGER_BUTTON);
-      }
 
       if (callback.data === PASSO1_BUTTON_DATA) {
         await sendPrivateMessage(callback.from.id, PASSO1_MESSAGE, PASSO1_BUTTONS);
