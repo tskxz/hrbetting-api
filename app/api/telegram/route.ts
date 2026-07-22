@@ -1,5 +1,13 @@
 import { get } from "@vercel/blob";
 import { NextRequest, NextResponse } from "next/server";
+import { createCheckoutSession } from "@/lib/stripe";
+import { ensureSubscriber, getSubscriberStatus } from "@/lib/supabase";
+import {
+  approveChatJoinRequest,
+  declineChatJoinRequest,
+  PREMIUM_CHAT_ID,
+  telegram,
+} from "@/lib/telegram";
 
 type TelegramMessage = {
   chat: { id: number };
@@ -9,12 +17,18 @@ type TelegramMessage = {
 type TelegramCallbackQuery = {
   id: string;
   data?: string;
-  from: { id: number };
+  from: { id: number; username?: string; first_name?: string };
+};
+
+type TelegramChatJoinRequest = {
+  chat: { id: number };
+  from: { id: number; username?: string; first_name?: string };
 };
 
 type TelegramUpdate = {
   message?: TelegramMessage;
   callback_query?: TelegramCallbackQuery;
+  chat_join_request?: TelegramChatJoinRequest;
 };
 
 type InlineKeyboard = {
@@ -36,6 +50,7 @@ const PROOF_BUTTON_DATA = "start|prova";
 const COMECAR_BUTTON_DATA = "start|comecar";
 const PASSO1_BUTTON_DATA = "start|passo1";
 const POSTOS_BUTTON_DATA = "start|postos";
+const ASSINAR_BUTTON_DATA = "start|assinar";
 
 const PROOF_BUTTON: InlineKeyboard = {
   inline_keyboard: [[{ text: "Mostra-me a prova", callback_data: PROOF_BUTTON_DATA }]],
@@ -56,8 +71,15 @@ const PASSO1_BUTTONS: InlineKeyboard = {
   ],
 };
 
-const SUBSCREVER_BUTTON: InlineKeyboard = {
-  inline_keyboard: [[{ text: "Subscrever Canal", url: CHANNEL_URL }]],
+const ASSINAR_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Assinar Premium", callback_data: ASSINAR_BUTTON_DATA }]],
+};
+
+const POSTOS_BUTTONS: InlineKeyboard = {
+  inline_keyboard: [
+    [{ text: "Assinar Premium", callback_data: ASSINAR_BUTTON_DATA }],
+    [{ text: "Subscrever Canal", url: CHANNEL_URL }],
+  ],
 };
 
 // Mensagem enviada quando alguem inicia conversa com o bot sem vir de um link
@@ -102,26 +124,21 @@ const POSTOS_MESSAGE = `Estas a postos! ✅
 
 Agora e seguir o jogo — as picks, as noticias e os resultados ficam aqui e no canal.
 
-Subscreve o canal e nao percas a proxima pick.`;
+O canal e reservado a subscritores. Assina o Premium e depois pede para entrar — a aprovacao e automatica assim que o pagamento for confirmado.`;
 
-async function telegram(method: string, payload: unknown) {
-  const response = await fetch(
-    `https://api.telegram.org/bot${process.env.BOT_TOKEN}/${method}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }
-  );
+const PAGAMENTO_MESSAGE = `Assinar Premium
 
-  const body = await response.text();
+Acesso completo ao canal HRBETTING: picks diarias, motor de calculo, taxa de acerto sempre visivel.
 
-  if (!response.ok) {
-    console.error("Telegram error", response.status, body);
-  }
+Pagamento seguro via Stripe. A subscricao fica ativa assim que o pagamento for confirmado, e a entrada no canal e aprovada automaticamente.`;
 
-  return response;
-}
+const PAGAMENTO_ERRO_MESSAGE = "Nao foi possivel criar o pagamento agora. Tenta novamente daqui a pouco.";
+
+const PEDIDO_RECUSADO_MESSAGE = `O teu pedido para entrar no canal HRBETTING nao foi aprovado — nao ha nenhuma subscricao ativa associada a esta conta.
+
+Assina o Premium para teres acesso.`;
+
+const PEDIDO_APROVADO_MESSAGE = "Pedido aprovado! Bem-vindo ao canal HRBETTING Premium.";
 
 // Linha separadora entre jogos, construida em MensagensExporter.cs (repositorio
 // HRBETTING) como `{Indent}{Separador}` — ex: "    ────────────".
@@ -278,7 +295,46 @@ export async function POST(req: NextRequest) {
       }
 
       if (callback.data === POSTOS_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, POSTOS_MESSAGE, SUBSCREVER_BUTTON);
+        await sendPrivateMessage(callback.from.id, POSTOS_MESSAGE, POSTOS_BUTTONS);
+      }
+
+      if (callback.data === ASSINAR_BUTTON_DATA) {
+        await ensureSubscriber(
+          callback.from.id,
+          callback.from.username,
+          callback.from.first_name
+        );
+
+        const session = await createCheckoutSession(
+          callback.from.id,
+          `${SIGNUP_URL}?checkout=success`,
+          `${SIGNUP_URL}?checkout=cancel`
+        );
+
+        if (session.url) {
+          await sendPrivateMessage(callback.from.id, PAGAMENTO_MESSAGE, {
+            inline_keyboard: [[{ text: "Pagar agora", url: session.url }]],
+          });
+        } else {
+          await sendPrivateMessage(callback.from.id, PAGAMENTO_ERRO_MESSAGE);
+        }
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    const joinRequest = update.chat_join_request;
+    if (joinRequest) {
+      if (joinRequest.chat.id === PREMIUM_CHAT_ID) {
+        const status = await getSubscriberStatus(joinRequest.from.id);
+
+        if (status === "active") {
+          await approveChatJoinRequest(joinRequest.chat.id, joinRequest.from.id);
+          await sendPrivateMessage(joinRequest.from.id, PEDIDO_APROVADO_MESSAGE);
+        } else {
+          await declineChatJoinRequest(joinRequest.chat.id, joinRequest.from.id);
+          await sendPrivateMessage(joinRequest.from.id, PEDIDO_RECUSADO_MESSAGE, ASSINAR_BUTTON);
+        }
       }
 
       return NextResponse.json({ ok: true });
