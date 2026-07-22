@@ -40,27 +40,21 @@ const WATERMARK = "*HRBETTING*";
 const WATERMARK_HEADER = `${WATERMARK}\n\n`;
 
 // Link de convite do canal principal (privado, sem @username publico —
-// confirmado via getChat). Usado como link por baixo do texto "@hrbetting"
-// na mensagem de prova, ja que nao existe uma mencao real @hrbetting.
+// confirmado via getChat). Usado pelo botao "Free" e por "Subscrever Canal".
 const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TELEGRAM_CHANNEL_URL";
 
 const SIGNUP_URL = process.env.SIGNUP_URL ?? "https://hrbetting-api.vercel.app/";
 
-const PROOF_BUTTON_DATA = "start|prova";
 const COMECAR_BUTTON_DATA = "start|comecar";
 const PASSO1_BUTTON_DATA = "start|passo1";
 const POSTOS_BUTTON_DATA = "start|postos";
 const ASSINAR_BUTTON_DATA = "start|assinar";
 
-const PROOF_BUTTON: InlineKeyboard = {
-  inline_keyboard: [[{ text: "Mostra-me a prova", callback_data: PROOF_BUTTON_DATA }]],
-};
-
-// Depois da prova, o utilizador escolhe entre continuar para o pagamento
+// Logo nas boas-vindas, o utilizador escolhe entre continuar para o pagamento
 // (Premium) ou só ver o canal (Free) — o canal e o mesmo nos dois casos,
 // atualmente gerido como premium: pedir entrada sem subscrição ativa
 // continua a ser recusado por chat_join_request, o Free só mostra o link.
-const PROOF_BUTTONS: InlineKeyboard = {
+const WELCOME_BUTTONS: InlineKeyboard = {
   inline_keyboard: [
     [{ text: "Premium", callback_data: COMECAR_BUTTON_DATA }],
     [{ text: "Free", url: CHANNEL_URL }],
@@ -101,12 +95,6 @@ A maioria dos apostadores segue o instinto e o resultado do ultimo jogo. Aqui se
 🔒 Conteudo exclusivo, protegido e para uso pessoal
 
 Os sinais chegam aqui, em privado, assim que ficam disponiveis.`;
-
-const PROOF_MESSAGE = `A prova — e podes confirma-la tu mesmo.
-
-Cada pick fica registada no canal com tudo a mostra: jogo, mercado, odd e a leitura por tras. No fim, o resultado fica sempre visivel — acertos e erros, nada escondido.
-
-Nao acreditas? Nao precisas. Abre o [@hrbetting](${CHANNEL_URL}), percorre os ultimos dias e confirma com os teus proprios olhos.`;
 
 const COMECAR_MESSAGE = `Como funciona
 
@@ -287,10 +275,6 @@ export async function POST(req: NextRequest) {
     if (callback) {
       await answerCallback(callback.id);
 
-      if (callback.data === PROOF_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, PROOF_MESSAGE, PROOF_BUTTONS);
-      }
-
       if (callback.data === COMECAR_BUTTON_DATA) {
         await sendPrivateMessage(callback.from.id, COMECAR_MESSAGE, PASSO1_TRIGGER_BUTTON);
       }
@@ -356,7 +340,7 @@ export async function POST(req: NextRequest) {
     const decoded = payload ? decodeStartPayload(payload) : null;
 
     if (!decoded) {
-      await sendPrivateMessage(message.chat.id, WELCOME_MESSAGE, PROOF_BUTTON);
+      await sendPrivateMessage(message.chat.id, WELCOME_MESSAGE, WELCOME_BUTTONS);
       return NextResponse.json({ ok: true });
     }
 
