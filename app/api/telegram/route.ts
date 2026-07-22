@@ -30,10 +30,7 @@ const WATERMARK_HEADER = `${WATERMARK}\n\n`;
 // na mensagem de prova, ja que nao existe uma mencao real @hrbetting.
 const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TELEGRAM_CHANNEL_URL";
 
-// TODO: definir AFFILIATE_SIGNUP_URL nas env vars quando a parceria/afiliacao
-// de apostas estiver fechada — por agora e so um placeholder.
-const AFFILIATE_SIGNUP_URL =
-  process.env.AFFILIATE_SIGNUP_URL ?? "https://DEFINIR_AFFILIATE_SIGNUP_URL";
+const SIGNUP_URL = process.env.SIGNUP_URL ?? "https://hrbetting-api.vercel.app/";
 
 const PROOF_BUTTON_DATA = "start|prova";
 const COMECAR_BUTTON_DATA = "start|comecar";
@@ -54,8 +51,9 @@ const PASSO1_TRIGGER_BUTTON: InlineKeyboard = {
 
 const PASSO1_BUTTONS: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "Criar conta", url: AFFILIATE_SIGNUP_URL }],
+    [{ text: "Criar conta", url: SIGNUP_URL }],
     [{ text: "Já tenho conta", callback_data: POSTOS_BUTTON_DATA }],
+    [{ text: "Subscrever Canal", url: CHANNEL_URL }],
   ],
 };
 
