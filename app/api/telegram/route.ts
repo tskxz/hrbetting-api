@@ -53,7 +53,6 @@ const PASSO1_BUTTONS: InlineKeyboard = {
   inline_keyboard: [
     [{ text: "Criar conta", url: SIGNUP_URL }],
     [{ text: "Já tenho conta", callback_data: POSTOS_BUTTON_DATA }],
-    [{ text: "Subscrever Canal", url: CHANNEL_URL }],
   ],
 };
 
