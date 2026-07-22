@@ -1,8 +1,14 @@
-# Sistema de Pagamentos — Estado Atual (branch `dev`)
+# Sistema de Pagamentos — Estado Atual
+
+> **Atualização:** promovido de `dev` para `master` (produção) — o bot real
+> do Telegram já corre este código. O Stripe continua em **modo de teste**
+> (`sk_test_...` / preço de teste) de propósito, para dar para validar o
+> fluxo completo com o bot real sem cobrar ninguém a sério. Ver secção
+> "Checklist para produção real" para o que falta trocar para modo live.
 
 Resumo do que foi implementado a partir de `docs/TELEGRAM_VERCEL_PAGAMENTOS_ARQUITETURA.md`
 (repositório `HRBETTING`), das limitações conhecidas, e do que falta para ir
-para produção real.
+para produção real (modo live).
 
 ## O que foi implementado
 
@@ -59,18 +65,24 @@ público), com credenciais reais em modo de teste:
    canal.
 6. Dados de teste limpos no final (Stripe + Supabase).
 
+Depois de promover para `master`, repeti o teste do passo 1 diretamente
+contra `https://hrbetting-api.vercel.app/api/telegram` (produção real) —
+sessão de Checkout criada e registo gravado na Supabase corretamente,
+depois limpo.
+
 ## Limitações conhecidas
 
-1. **Vercel Deployment Protection (SSO) nos previews.** O URL da `dev`
-   (`https://hrbetting-api-git-dev-tanjil-khans-projects.vercel.app/`) exige
-   login Vercel. Para ti, a navegar já com sessão iniciada, é transparente.
-   Mas **serviços externos automáticos não conseguem fazer login** — por
-   isso o Stripe não consegue entregar webhooks reais a este URL, nem o
-   Telegram conseguiria se o bot apontasse para lá. Produção não tem esta
-   proteção.
-2. **`STRIPE_WEBHOOK_SECRET` atual é temporário**, gerado pelo `stripe listen`
-   local — só funciona enquanto esse comando corre no meu/teu computador. Não
-   serve para um webhook real apontado a um URL publicado.
+1. **Vercel Deployment Protection (SSO) nos previews** (deixou de afetar o
+   fluxo principal, já que produção não tem esta proteção). Continua a
+   aplicar-se ao URL da `dev`
+   (`https://hrbetting-api-git-dev-tanjil-khans-projects.vercel.app/`), caso
+   voltes a usá-lo para testar alterações futuras antes de promover.
+2. **`STRIPE_WEBHOOK_SECRET` de produção já é definitivo** — criado via API
+   do Stripe (`webhook_endpoints`), a apontar para
+   `https://hrbetting-api.vercel.app/api/payments/webhook`, ainda em modo de
+   teste. Quando trocares para modo live (checklist abaixo), este endpoint
+   webhook tem de ser recriado em modo live — os endpoints de teste e live
+   são sempre separados no Stripe.
 3. **A iframe do cartão do Stripe Checkout não é acessível por automação de
    browser** (isolamento propositado por conformidade PCI). Os testes de
    pagamento completo foram feitos criando a subscrição diretamente via API
@@ -87,32 +99,32 @@ público), com credenciais reais em modo de teste:
 7. **Credenciais atuais do Stripe são de modo de teste** (`sk_test_...`) —
    produção precisa das chaves e do preço em modo real (`sk_live_...`).
 
-## Checklist para produção real
+## Checklist para produção real (modo live)
+
+Já feito: `dev` promovida para `master`, env vars de Supabase/Stripe (modo
+teste) na Vercel em Production, webhook do Stripe (modo teste) criado a
+apontar para `https://hrbetting-api.vercel.app/api/payments/webhook`,
+migração aplicada (mesmo projeto Supabase usado em dev e produção). O bot
+real já usa este código — só falta trocar o Stripe para modo live antes de
+cobrar utilizadores a sério.
 
 1. **Ativar "Pedidos de Adesão"** no canal HRBETTING (Telegram → Editar canal
    → Definições de Subscritores), se ainda não estiver ativo.
-2. **Stripe em modo real**: criar o produto/preço em modo live (não teste) e
-   obter o novo `STRIPE_PRICE_ID` e `STRIPE_SECRET_KEY` (`sk_live_...`).
-3. **Configurar o webhook definitivo no Stripe** (Developers → Webhooks, modo
-   live) a apontar para `https://hrbetting-api.vercel.app/api/payments/webhook`,
-   subscrito aos eventos: `checkout.session.completed`,
-   `customer.subscription.created`, `customer.subscription.updated`,
-   `customer.subscription.deleted`, `invoice.payment_failed`. Copiar o
-   `STRIPE_WEBHOOK_SECRET` definitivo gerado.
-4. **Adicionar todas as env vars à Vercel em Production**:
-   `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` (live),
-   `STRIPE_WEBHOOK_SECRET` (live, do passo 3), `STRIPE_PRICE_ID` (live).
-   `CRON_SECRET`, `BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`,
-   `TELEGRAM_CHANNEL_URL` já lá estão. `SIGNUP_URL` não precisa de ser
-   definida em Produção — o fallback do código já aponta para o URL certo
-   (`https://hrbetting-api.vercel.app/`).
-5. **Aplicar a migração** `supabase/migrations/0001_subscribers.sql` na base
-   de dados de produção (mesmo projeto Supabase, ou o de produção se vieres a
-   separar dev/prod).
-6. **Promover a branch `dev` para `master`** (PR + merge, ou promoção direta
-   do deployment na Vercel).
-7. **Fazer um pagamento real de teste** (valor pequeno, cartão real, depois
+2. **Stripe em modo live**: criar o produto/preço em modo live (não teste) no
+   dashboard, obter o novo `STRIPE_PRICE_ID` e `STRIPE_SECRET_KEY`
+   (`sk_live_...`).
+3. **Criar o webhook em modo live** (Developers → Webhooks, com o toggle de
+   "Test mode" desligado) a apontar para o mesmo URL
+   (`https://hrbetting-api.vercel.app/api/payments/webhook`), com os mesmos
+   eventos: `checkout.session.completed`, `customer.subscription.created`,
+   `customer.subscription.updated`, `customer.subscription.deleted`,
+   `invoice.payment_failed`. Copiar o novo `STRIPE_WEBHOOK_SECRET` (é sempre
+   diferente do de modo teste).
+4. **Substituir em Production**: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+   e `STRIPE_PRICE_ID` pelos valores live do passo 2 e 3 (`vercel env rm` +
+   `vercel env add`, ou no dashboard).
+5. **Fazer um pagamento real de teste** (valor pequeno, cartão real, depois
    cancela/reembolsa) para confirmar que a ligação em produção funciona de
    ponta a ponta antes de anunciar a subscrição a utilizadores reais.
-8. **Acompanhar os primeiros pagamentos reais** via logs da Vercel e o painel
+6. **Acompanhar os primeiros pagamentos reais** via logs da Vercel e o painel
    de eventos do Stripe.
