@@ -6,13 +6,39 @@ type TelegramMessage = {
   text?: string;
 };
 
+type TelegramCallbackQuery = {
+  id: string;
+  data?: string;
+  from: { id: number };
+};
+
 type TelegramUpdate = {
   message?: TelegramMessage;
+  callback_query?: TelegramCallbackQuery;
+};
+
+type InlineKeyboard = {
+  inline_keyboard: Array<Array<{ text: string; callback_data?: string; url?: string }>>;
 };
 
 const TELEGRAM_TEXT_LIMIT = 4096;
 const WATERMARK = "*HRBETTING*";
 const WATERMARK_HEADER = `${WATERMARK}\n\n`;
+
+// Link do canal principal, mostrado no passo "prova" do onboarding do bot.
+// TODO: definir TELEGRAM_CHANNEL_URL nas env vars com o link/convite real do canal
+// (o ChatId guardado na app HRBETTING e um ID numerico privado, sem link publico).
+const CHANNEL_URL = process.env.TELEGRAM_CHANNEL_URL ?? "https://t.me/DEFINIR_TELEGRAM_CHANNEL_URL";
+
+const PROOF_BUTTON_DATA = "start|prova";
+
+const PROOF_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Mostra-me a prova", callback_data: PROOF_BUTTON_DATA }]],
+};
+
+const CHANNEL_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Abrir canal HRBETTING", url: CHANNEL_URL }]],
+};
 
 // Mensagem enviada quando alguem inicia conversa com o bot sem vir de um link
 // de intervalo especifico (ex: link generico partilhado no site/bio/canal).
@@ -26,6 +52,12 @@ A maioria dos apostadores segue o instinto e o resultado do ultimo jogo. Aqui se
 🔒 Conteudo exclusivo, protegido e para uso pessoal
 
 Os sinais chegam aqui, em privado, assim que ficam disponiveis.`;
+
+const PROOF_MESSAGE = `A prova — e podes confirma-la tu mesmo.
+
+Cada pick fica registada no canal com tudo a mostra: jogo, mercado, odd e a leitura por tras. No fim, o resultado fica sempre visivel — acertos e erros, nada escondido.
+
+Nao acreditas? Nao precisas. Abre o canal e confirma com os teus proprios olhos.`;
 
 async function telegram(method: string, payload: unknown) {
   const response = await fetch(
@@ -94,11 +126,17 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function sendPrivateMessage(chatId: number, text: string) {
+async function sendPrivateMessage(
+  chatId: number,
+  text: string,
+  replyMarkup?: InlineKeyboard
+) {
   const parts = splitTelegramText(interspersWatermark(text));
   let response: Response | undefined;
 
   for (let i = 0; i < parts.length; i++) {
+    const isLastPart = i === parts.length - 1;
+
     response = await telegram("sendMessage", {
       chat_id: chatId,
       text: WATERMARK_HEADER + parts[i],
@@ -106,6 +144,8 @@ async function sendPrivateMessage(chatId: number, text: string) {
       disable_web_page_preview: true,
       // Impede reencaminhar/guardar, tal como as mensagens do canal na app HRBETTING.
       protect_content: true,
+      // O teclado so vai anexado a ultima parte da mensagem.
+      ...(isLastPart && replyMarkup ? { reply_markup: replyMarkup } : {}),
     });
 
     if (!response.ok) {
@@ -118,6 +158,10 @@ async function sendPrivateMessage(chatId: number, text: string) {
   }
 
   return response!;
+}
+
+async function answerCallback(callbackQueryId: string) {
+  return telegram("answerCallbackQuery", { callback_query_id: callbackQueryId });
 }
 
 async function loadSignalsJson(
@@ -172,6 +216,17 @@ export async function POST(req: NextRequest) {
   const update = (await req.json()) as TelegramUpdate;
 
   try {
+    const callback = update.callback_query;
+    if (callback) {
+      await answerCallback(callback.id);
+
+      if (callback.data === PROOF_BUTTON_DATA) {
+        await sendPrivateMessage(callback.from.id, PROOF_MESSAGE, CHANNEL_BUTTON);
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
     const message = update.message;
     const text = message?.text?.trim() ?? "";
 
@@ -183,7 +238,7 @@ export async function POST(req: NextRequest) {
     const decoded = payload ? decodeStartPayload(payload) : null;
 
     if (!decoded) {
-      await sendPrivateMessage(message.chat.id, WELCOME_MESSAGE);
+      await sendPrivateMessage(message.chat.id, WELCOME_MESSAGE, PROOF_BUTTON);
       return NextResponse.json({ ok: true });
     }
 
