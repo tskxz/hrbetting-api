@@ -47,7 +47,6 @@ const SIGNUP_URL = process.env.SIGNUP_URL ?? "https://hrbetting-api.vercel.app/"
 
 const PASSO1_BUTTON_DATA = "start|passo1";
 const POSTOS_BUTTON_DATA = "start|postos";
-const ASSINAR_BUTTON_DATA = "start|assinar";
 
 // Logo nas boas-vindas, o utilizador escolhe entre continuar para o pagamento
 // (Premium) ou só ver o canal (Free) — o canal e o mesmo nos dois casos,
@@ -60,20 +59,15 @@ const WELCOME_BUTTONS: InlineKeyboard = {
   ],
 };
 
-const PASSO1_BUTTONS: InlineKeyboard = {
-  inline_keyboard: [
-    [{ text: "Pagar agora", callback_data: ASSINAR_BUTTON_DATA }],
-    [{ text: "Já paguei", callback_data: POSTOS_BUTTON_DATA }],
-  ],
-};
-
-const ASSINAR_BUTTON: InlineKeyboard = {
-  inline_keyboard: [[{ text: "Assinar Premium", callback_data: ASSINAR_BUTTON_DATA }]],
+// Botao reutilizado sempre que e preciso reencaminhar para o Passo 1 (que
+// cria a sessao de Checkout na hora e mostra "Pagar agora" ja como link real).
+const PASSO1_LINK_BUTTON: InlineKeyboard = {
+  inline_keyboard: [[{ text: "Assinar", callback_data: PASSO1_BUTTON_DATA }]],
 };
 
 const POSTOS_BUTTONS: InlineKeyboard = {
   inline_keyboard: [
-    [{ text: "Assinar Premium", callback_data: ASSINAR_BUTTON_DATA }],
+    [{ text: "Assinar", callback_data: PASSO1_BUTTON_DATA }],
     [{ text: "Subscrever Canal", url: CHANNEL_URL }],
   ],
 };
@@ -93,28 +87,23 @@ Os sinais chegam aqui, em privado, assim que ficam disponiveis.`;
 
 const PASSO1_MESSAGE = `Passo 1 — Assinar
 
-Para teres acesso as picks completas e ao canal precisas de uma subscricao Premium ativa.
+Acesso completo ao canal HRBETTING: picks diarias, motor de calculo, taxa de acerto sempre visivel.
 
-Ainda nao pagaste? Paga a partir do botao abaixo.
+Pagamento seguro via Stripe. A subscricao fica ativa assim que o pagamento for confirmado, e a entrada no canal e aprovada automaticamente.
+
 Ja pagaste? Confirma no botao "Ja paguei" para avancares.`;
+
+const PASSO1_ERRO_MESSAGE = "Nao foi possivel criar o pagamento agora. Tenta novamente daqui a pouco.";
 
 const POSTOS_MESSAGE = `Estas a postos! ✅
 
 Agora e seguir o jogo — as picks, as noticias e os resultados ficam aqui e no canal.
 
-O canal e reservado a subscritores. Assina o Premium e depois pede para entrar — a aprovacao e automatica assim que o pagamento for confirmado.`;
-
-const PAGAMENTO_MESSAGE = `Assinar Premium
-
-Acesso completo ao canal HRBETTING: picks diarias, motor de calculo, taxa de acerto sempre visivel.
-
-Pagamento seguro via Stripe. A subscricao fica ativa assim que o pagamento for confirmado, e a entrada no canal e aprovada automaticamente.`;
-
-const PAGAMENTO_ERRO_MESSAGE = "Nao foi possivel criar o pagamento agora. Tenta novamente daqui a pouco.";
+O canal e reservado a subscritores. Assina e depois pede para entrar — a aprovacao e automatica assim que o pagamento for confirmado.`;
 
 const PEDIDO_RECUSADO_MESSAGE = `O teu pedido para entrar no canal HRBETTING nao foi aprovado — nao ha nenhuma subscricao ativa associada a esta conta.
 
-Assina o Premium para teres acesso.`;
+Assina para teres acesso.`;
 
 const PEDIDO_APROVADO_MESSAGE = "Pedido aprovado! Bem-vindo ao canal HRBETTING Premium.";
 
@@ -261,14 +250,6 @@ export async function POST(req: NextRequest) {
       await answerCallback(callback.id);
 
       if (callback.data === PASSO1_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, PASSO1_MESSAGE, PASSO1_BUTTONS);
-      }
-
-      if (callback.data === POSTOS_BUTTON_DATA) {
-        await sendPrivateMessage(callback.from.id, POSTOS_MESSAGE, POSTOS_BUTTONS);
-      }
-
-      if (callback.data === ASSINAR_BUTTON_DATA) {
         await ensureSubscriber(
           callback.from.id,
           callback.from.username,
@@ -281,13 +262,28 @@ export async function POST(req: NextRequest) {
           `${SIGNUP_URL}?checkout=cancel`
         );
 
-        if (session.url) {
-          await sendPrivateMessage(callback.from.id, PAGAMENTO_MESSAGE, {
-            inline_keyboard: [[{ text: "Pagar agora", url: session.url }]],
-          });
-        } else {
-          await sendPrivateMessage(callback.from.id, PAGAMENTO_ERRO_MESSAGE);
-        }
+        const buttons: InlineKeyboard = session.url
+          ? {
+              inline_keyboard: [
+                [{ text: "Pagar agora", url: session.url }],
+                [{ text: "Já paguei", callback_data: POSTOS_BUTTON_DATA }],
+              ],
+            }
+          : {
+              inline_keyboard: [
+                [{ text: "Tentar novamente", callback_data: PASSO1_BUTTON_DATA }],
+              ],
+            };
+
+        await sendPrivateMessage(
+          callback.from.id,
+          session.url ? PASSO1_MESSAGE : PASSO1_ERRO_MESSAGE,
+          buttons
+        );
+      }
+
+      if (callback.data === POSTOS_BUTTON_DATA) {
+        await sendPrivateMessage(callback.from.id, POSTOS_MESSAGE, POSTOS_BUTTONS);
       }
 
       return NextResponse.json({ ok: true });
@@ -303,7 +299,7 @@ export async function POST(req: NextRequest) {
           await sendPrivateMessage(joinRequest.from.id, PEDIDO_APROVADO_MESSAGE);
         } else {
           await declineChatJoinRequest(joinRequest.chat.id, joinRequest.from.id);
-          await sendPrivateMessage(joinRequest.from.id, PEDIDO_RECUSADO_MESSAGE, ASSINAR_BUTTON);
+          await sendPrivateMessage(joinRequest.from.id, PEDIDO_RECUSADO_MESSAGE, PASSO1_LINK_BUTTON);
         }
       }
 
