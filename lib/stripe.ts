@@ -1,9 +1,9 @@
 import Stripe from "stripe";
 
-// Fallback nao-vazio so para nao rebentar a construcao do cliente durante o
-// build (antes de STRIPE_SECRET_KEY estar definida); chamadas reais falham
-// com um erro de autenticacao claro do Stripe ate a env var ser configurada.
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_test_placeholder");
+// Fallback nao-vazio so para nao rebentar a construcao do cliente enquanto
+// STRIPE_SECRET_KEY nao estiver definida (ou estiver vazia no .env); chamadas
+// reais falham com um erro de autenticacao claro do Stripe ate la.
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder");
 
 export const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID ?? "";
 

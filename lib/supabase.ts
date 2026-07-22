@@ -8,8 +8,8 @@ import { createClient } from "@supabase/supabase-js";
 // build antes de SUPABASE_URL estar definida; chamadas reais falham com um
 // erro de rede claro ate a env var ser configurada.
 export const supabase = createClient(
-  process.env.SUPABASE_URL ?? "https://placeholder.supabase.co",
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? "placeholder",
+  process.env.SUPABASE_URL || "https://placeholder.supabase.co",
+  process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder",
   {
     auth: {
       persistSession: false,
