@@ -1,6 +1,6 @@
 # HR Betting API
 
-API em Next.js que não calcula nada — a análise dos jogos e o cálculo de probabilidades são feitos pela aplicação desktop HR Betting (C# / WPF). Este projeto é a ponte entre essa app e o Telegram: recebe os sinais já calculados, entrega-os aos utilizadores através do bot (onboarding, picks, subscrição premium) e trata o sistema de pagamentos (Stripe + Supabase) que controla o acesso ao canal.
+API em Next.js que faz a ponte entre a aplicação desktop HR Betting (C# / WPF) — onde são feitos os cálculos e a análise dos jogos — e o Telegram: recebe os sinais já calculados, entrega-os aos utilizadores através do bot (onboarding, picks, subscrição premium) e trata o sistema de pagamentos (Stripe + Supabase) que controla o acesso ao canal.
 
 ## Stack técnica
 
