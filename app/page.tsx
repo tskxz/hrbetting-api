@@ -33,8 +33,10 @@ export default function Home() {
               HR Betting API
             </h1>
             <p className="mx-auto max-w-xl text-pretty leading-relaxed text-muted-foreground">
-              API para análise de jogos de futebol e cálculo de probabilidades,
-              utilizada por uma aplicação desktop em C# (.NET / WPF).
+              Este site não calcula nada — a análise dos jogos e o cálculo de
+              probabilidades são feitos pela aplicação desktop HR Betting
+              (C# / WPF). Aqui vive a ponte para o Telegram: entrega dos
+              sinais, o bot e o sistema de subscrição premium.
             </p>
           </div>
         </header>
